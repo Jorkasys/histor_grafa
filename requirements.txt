@@ -1,0 +1,6 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30
+asyncpg>=0.30
+pyodbc>=5.1          # Microsoft ODBC Driver 18 for SQL Server
+pymssql>=2.3         # FreeTDS: вход учётной записью Windows (ДОМЕН\логин)
+tzdata               # часовые пояса (Europe/Moscow и т. п.)

@@ -1,0 +1,8 @@
+# Переводы строк LF в репозитории — и при клонировании на Windows: файлы
+# настроек попадают в Linux-контейнеры
+* text=auto eol=lf
+
+*.png binary
+*.docx binary
+*.pdf binary
+web/vendor/** linguist-vendored

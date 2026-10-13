@@ -1,0 +1,11 @@
+.git
+.venv
+venv
+.env
+**/__pycache__
+**/*.pyc
+.pytest_cache
+docs
+tests
+grafana
+*.tar

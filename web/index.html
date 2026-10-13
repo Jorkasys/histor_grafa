@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>historian2grafana</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/uPlot.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/connection">
+      <svg viewBox="0 0 24 24" class="brand-mark" aria-hidden="true">
+        <path d="M3 17l5-6 4 4 5-8 4 5" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>
+        <span class="brand-name">historian2grafana</span>
+        <span class="brand-sub">AVEVA Historian → база → графики</span>
+      </span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="#/connection" data-page="connection">1. Подключение</a>
+      <a href="#/loading" data-page="loading">2. Загрузка</a>
+      <a href="#/charts" data-page="charts">3. Графики</a>
+      <a href="#" id="grafana-link" target="_blank" rel="noopener">Grafana ↗</a>
+    </nav>
+    <div class="status-pill" id="status-pill" title="Состояние копирования">…</div>
+  </header>
+
+  <main class="content" id="view"></main>
+
+  <div id="toasts" class="toasts"></div>
+  <div id="modal-root"></div>
+
+  <script src="vendor/uPlot.iife.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

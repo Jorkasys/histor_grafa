@@ -1,0 +1,24 @@
+# Источник данных Grafana — база приложения. Учётная запись только на чтение:
+# её создаёт приложение при запуске (переменные GRAFANA_DB_* в файле .env).
+apiVersion: 1
+
+datasources:
+  - name: Historian DB
+    uid: historian-db
+    type: postgres
+    access: proxy
+    url: ${DB_ADDRESS}
+    user: ${GRAFANA_DB_USER}
+    database: ${DB_NAME}
+    isDefault: true
+    editable: false
+    secureJsonData:
+      password: ${GRAFANA_DB_PASSWORD}
+    jsonData:
+      database: ${DB_NAME}
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: true
+      maxOpenConns: 10
+      maxIdleConns: 4
+      connMaxLifetime: 14400

@@ -1,0 +1,109 @@
+# ===========================================================================
+#  historian2grafana: AVEVA Historian → база TimescaleDB → графики.
+#
+#      copy .env.example .env          (в PowerShell: Copy-Item .env.example .env)
+#      docker compose up -d --build
+#
+#  Приложение — http://localhost:8000, Grafana — http://localhost:3000
+#  (порты меняются в .env). Подробно — docs/INSTALL.md.
+# ===========================================================================
+name: historian2grafana
+
+services:
+  # -------------------------------------------------------------------------
+  #  База: PostgreSQL 16 с расширением TimescaleDB для временных рядов
+  # -------------------------------------------------------------------------
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: h2g-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: historian
+      POSTGRES_USER: historian
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-historian}
+      TIMESCALEDB_TELEMETRY: "off"
+      TZ: UTC
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U historian -d historian"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    shm_size: 256mb
+
+  # -------------------------------------------------------------------------
+  #  Приложение: подключение к историку, копирование, страницы в браузере
+  # -------------------------------------------------------------------------
+  app:
+    build: .
+    image: historian2grafana-app:latest
+    container_name: h2g-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: historian
+      DB_USER: historian
+      DB_PASSWORD: ${DB_PASSWORD:-historian}
+      GRAFANA_DB_USER: grafana_reader
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_reader}
+      GRAFANA_PORT: ${GRAFANA_PORT:-3000}
+      GRAFANA_URL: ${GRAFANA_URL:-}
+      HISTORIAN_OLD_TLS: ${HISTORIAN_OLD_TLS:-0}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-Europe/Moscow}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    # Свои записи имён для серверов, которые не находятся из контейнера
+    # (раскомментируйте и впишите адрес — см. docs/INSTALL.md, «Неполадки»):
+    # extra_hosts:
+    #   - "OKFFS800HIS01:10.20.30.40"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # -------------------------------------------------------------------------
+  #  Grafana: готовый дашборд «Теги историка»
+  # -------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: h2g-grafana
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Смотреть графики можно без входа; менять дашборды — после входа admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/historian.json
+      # Для файлов в grafana/provisioning
+      DB_ADDRESS: db:5432
+      DB_NAME: historian
+      GRAFANA_DB_USER: grafana_reader
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_reader}
+      DASHBOARDS_DIR: /etc/grafana/dashboards
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+
+volumes:
+  db-data:
+  grafana-data:

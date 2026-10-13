@@ -1,0 +1,14 @@
+# Готовые дашборды — файлы *.json из папки grafana/dashboards проекта.
+# Изменения, сохранённые в интерфейсе Grafana, живут до изменения файла.
+apiVersion: 1
+
+providers:
+  - name: historian2grafana
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: true
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: ${DASHBOARDS_DIR}

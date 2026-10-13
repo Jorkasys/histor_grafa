@@ -1,0 +1,390 @@
+{
+  "uid": "historian-tags",
+  "title": "Теги историка",
+  "description": "Значения тегов AVEVA Historian, скопированные в базу historian2grafana",
+  "tags": [
+    "historian2grafana"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "tag",
+        "label": "Теги",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "historian-db"
+        },
+        "query": "SELECT name || coalesce(' — ' || description, '') AS __text, name AS __value\nFROM tag\nWHERE active OR EXISTS (SELECT 1 FROM tag_sync s WHERE s.tag_id = tag.tag_id)\nORDER BY name",
+        "definition": "SELECT name || coalesce(' — ' || description, '') AS __text, name AS __value\nFROM tag\nWHERE active OR EXISTS (SELECT 1 FROM tag_sync s WHERE s.tag_id = tag.tag_id)\nORDER BY name",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": false,
+        "sort": 0,
+        "current": {},
+        "options": [],
+        "hide": 0,
+        "description": "Выберите один или несколько тегов; можно искать по имени и описанию"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Последние значения",
+      "description": "Последнее скопированное значение каждого выбранного тега",
+      "datasource": {
+        "type": "postgres",
+        "uid": "historian-db"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Прошло"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Время значения"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Значение"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "historian-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT name AS \"Тег\",\n       description AS \"Описание\",\n       CASE WHEN quality = 0 THEN value END AS \"Значение\",\n       unit AS \"Ед.\",\n       CASE WHEN quality <> 0 THEN 'плохое качество' ELSE value_text END AS \"Текст\",\n       ts AS \"Время значения\",\n       extract(epoch FROM now() - ts) AS \"Прошло\",\n       row_count AS \"Строк в базе\"\nFROM tag_latest\nWHERE name IN (${tag:sqlstring})\nORDER BY name"
+        }
+      ],
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Выбранные теги на одном графике",
+      "description": "Все выбранные числовые и дискретные теги. Выделите участок мышью, чтобы увеличить",
+      "datasource": {
+        "type": "postgres",
+        "uid": "historian-db"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "historian-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "-- Среднее на шаге графика + значение до начала периода и его продолжение\n-- до конца скопированного: значение тега держится до следующего изменения\nSELECT $__timeGroupAlias(v.ts, $__interval), t.name AS metric, avg(v.value) AS value\nFROM tag_value v\nJOIN tag t ON t.tag_id = v.tag_id\nWHERE t.name IN (${tag:sqlstring}) AND $__timeFilter(v.ts) AND v.quality = 0 AND v.value IS NOT NULL\nGROUP BY 1, 2\nUNION ALL\nSELECT $__timeFrom()::timestamptz, t.name, p.value\nFROM tag t\nCROSS JOIN LATERAL (\n    SELECT x.value FROM tag_value x\n    WHERE x.tag_id = t.tag_id AND x.ts < $__timeFrom() AND x.quality = 0 AND x.value IS NOT NULL\n    ORDER BY x.ts DESC LIMIT 1) p\nWHERE t.name IN (${tag:sqlstring}) AND t.datatype <> 'string'\nUNION ALL\nSELECT least($__timeTo()::timestamptz, s.synced_until), t.name, p.value\nFROM tag t\nJOIN tag_sync s ON s.tag_id = t.tag_id\nCROSS JOIN LATERAL (\n    SELECT x.value FROM tag_value x\n    WHERE x.tag_id = t.tag_id AND x.ts <= $__timeTo() AND x.quality = 0 AND x.value IS NOT NULL\n    ORDER BY x.ts DESC LIMIT 1) p\nWHERE t.name IN (${tag:sqlstring}) AND t.datatype <> 'string' AND s.synced_until > $__timeFrom()\nORDER BY 1"
+        }
+      ],
+      "id": 2
+    },
+    {
+      "type": "row",
+      "title": "Каждый тег отдельно (строковые — в таблицах)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "$tag",
+      "description": "Отдельный график на каждый выбранный тег",
+      "datasource": {
+        "type": "postgres",
+        "uid": "historian-db"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "historian-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "-- Среднее на шаге графика + значение до начала периода и его продолжение\n-- до конца скопированного: значение тега держится до следующего изменения\nSELECT $__timeGroupAlias(v.ts, $__interval), t.name AS metric, avg(v.value) AS value\nFROM tag_value v\nJOIN tag t ON t.tag_id = v.tag_id\nWHERE t.name IN (${tag:sqlstring}) AND $__timeFilter(v.ts) AND v.quality = 0 AND v.value IS NOT NULL\nGROUP BY 1, 2\nUNION ALL\nSELECT $__timeFrom()::timestamptz, t.name, p.value\nFROM tag t\nCROSS JOIN LATERAL (\n    SELECT x.value FROM tag_value x\n    WHERE x.tag_id = t.tag_id AND x.ts < $__timeFrom() AND x.quality = 0 AND x.value IS NOT NULL\n    ORDER BY x.ts DESC LIMIT 1) p\nWHERE t.name IN (${tag:sqlstring}) AND t.datatype <> 'string'\nUNION ALL\nSELECT least($__timeTo()::timestamptz, s.synced_until), t.name, p.value\nFROM tag t\nJOIN tag_sync s ON s.tag_id = t.tag_id\nCROSS JOIN LATERAL (\n    SELECT x.value FROM tag_value x\n    WHERE x.tag_id = t.tag_id AND x.ts <= $__timeTo() AND x.quality = 0 AND x.value IS NOT NULL\n    ORDER BY x.ts DESC LIMIT 1) p\nWHERE t.name IN (${tag:sqlstring}) AND t.datatype <> 'string' AND s.synced_until > $__timeFrom()\nORDER BY 1"
+        }
+      ],
+      "repeat": "tag",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "id": 4
+    },
+    {
+      "type": "row",
+      "title": "Значения из базы",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "id": 5
+    },
+    {
+      "type": "table",
+      "title": "Последние 500 строк за период",
+      "description": "Как значения лежат в базе: по ним удобно сверить копию с историком",
+      "datasource": {
+        "type": "postgres",
+        "uid": "historian-db"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Время"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Значение"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "historian-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-- Сырые строки из базы — удобно сверить с историком (SSMS, запрос к Runtime.dbo.History)\nSELECT v.ts AS \"Время\", t.name AS \"Тег\", v.value AS \"Значение\", v.value_text AS \"Текст\",\n       CASE v.quality WHEN 0 THEN 'хорошее' ELSE 'плохое' END AS \"Качество\"\nFROM tag_value v\nJOIN tag t ON t.tag_id = v.tag_id\nWHERE t.name IN (${tag:sqlstring}) AND $__timeFilter(v.ts)\nORDER BY v.ts DESC\nLIMIT 500"
+        }
+      ],
+      "id": 6
+    }
+  ]
+}
