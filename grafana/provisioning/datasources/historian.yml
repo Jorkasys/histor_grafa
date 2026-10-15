@@ -18,7 +18,8 @@ datasources:
       database: ${DB_NAME}
       sslmode: disable
       postgresVersion: 1600
-      timescaledb: true
+      # Запросы дашборда работают и на обычном PostgreSQL (комплект без Docker)
+      timescaledb: false
       maxOpenConns: 10
       maxIdleConns: 4
       connMaxLifetime: 14400

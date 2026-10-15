@@ -2,6 +2,10 @@
 # настроек попадают в Linux-контейнеры
 * text=auto eol=lf
 
+# Файлы запуска Windows — с переводами строк Windows
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
 *.png binary
 *.docx binary
 *.pdf binary

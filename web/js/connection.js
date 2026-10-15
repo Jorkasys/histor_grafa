@@ -69,7 +69,9 @@ export async function connectionPage(view) {
     userLabel.textContent = auth === 'windows' ? 'Логин Windows (ДОМЕН\\логин)' : 'Логин SQL Server';
     f.user.placeholder = auth === 'windows' ? 'EU\\ivanov' : 'historian_reader';
     authHelp.textContent = auth === 'windows'
-      ? 'Пишите домен и логин через обратную косую черту, как при входе в Windows.'
+      ? 'Пишите домен и логин через обратную косую черту, как при входе в Windows. ' +
+        'Если приложение запущено без Docker (start.bat) под этой же учётной записью, ' +
+        'логин и пароль можно оставить пустыми — вход будет как в SSMS.'
       : '';
   };
   drawAuth();

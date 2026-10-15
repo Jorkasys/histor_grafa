@@ -68,10 +68,18 @@ class Database:
 
     async def migrate(self) -> None:
         async with self.acquire() as conn:
-            try:
-                await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
-            except asyncpg.PostgresError as exc:
-                log.warning("TimescaleDB недоступна (%s) — работаю на обычном PostgreSQL", exc)
+            # В Docker база — с TimescaleDB, в комплекте без Docker — обычный
+            # PostgreSQL: приложение работает с обеими
+            available = await conn.fetchval(
+                "SELECT count(*) FROM pg_available_extensions WHERE name = 'timescaledb'")
+            if available:
+                try:
+                    await conn.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
+                except asyncpg.PostgresError as exc:
+                    log.warning("TimescaleDB не подключилась (%s) — данные хранятся в "
+                                "обычных таблицах PostgreSQL", exc)
+            else:
+                log.info("база — PostgreSQL без TimescaleDB: данные хранятся в обычных таблицах")
             self.timescale = bool(await conn.fetchval(
                 "SELECT count(*) FROM pg_extension WHERE extname = 'timescaledb'"))
             await conn.execute(SCHEMA.read_text(encoding="utf-8"))
