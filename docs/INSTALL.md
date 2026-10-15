@@ -88,7 +88,7 @@ docker compose version
 
 ## 4. Получение проекта
 
-Положите проект в папку, в пути к которой нет русских букв и пробелов, например `C:\historian2grafana`.
+Положите проект в папку, в пути к которой нет русских букв и пробелов, например `C:\historian2grafana` или `D:\historian2grafana` — диск может быть любой. Ниже в примерах — `C:\historian2grafana`; если у вас другой путь, подставляйте свой.
 
 - **С GitHub через git:** `git clone <адрес репозитория> C:\historian2grafana`
 - **Архивом:** на странице репозитория **Code → Download ZIP**, распакуйте в `C:\historian2grafana` (внутри должны сразу лежать `docker-compose.yml`, `Dockerfile`, папки `app`, `web`, `grafana`).

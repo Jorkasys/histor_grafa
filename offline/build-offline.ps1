@@ -196,4 +196,5 @@ if (Test-Path $Zip) { Remove-Item $Zip -Force }
 $size = [math]::Round((Get-Item $Zip).Length / 1MB)
 Write-Host ''
 Write-Host "Готово: $Zip ($size МБ)" -ForegroundColor Green
-Write-Host 'Перенесите архив на компьютер без интернета, распакуйте в C:\ и запустите start.bat'
+Write-Host 'Перенесите архив на компьютер без интернета, распакуйте в корень любого диска (C:\, D:\ ...)'
+Write-Host 'и запустите start.bat из получившейся папки historian2grafana-offline'
